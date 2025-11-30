@@ -3,7 +3,7 @@
 
 A beautiful, fast, and fully responsive web dashboard that aggregates the latest cryptocurrency news from multiple trusted sources, analyzes the sentiment of each article using AI (TextBlob), and displays an interactive sentiment overview with live filtering and bilingual (Arabic / English) support.
 
-Live Demo: https://crypto-sentiment-dashboard.onrender.com *(example – deploy yours in seconds)*
+Live Demo: https://crypto-sentiment-app-six.vercel.app/ *(example – deploy yours in seconds)*
 
 ## Features
 
