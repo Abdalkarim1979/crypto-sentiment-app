@@ -85,7 +85,7 @@ Just fork → make changes → submit a pull request.
 
 ## License
 
-MIT License – feel free to use, modify, and deploy commercially or personally.
+MIT License 
 
 ---
 
