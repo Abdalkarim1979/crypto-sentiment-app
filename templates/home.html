@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-key="title">تحليل مشاعر أخبار الكريبتو</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {font-family: 'Tajawal', sans-serif; background:#0f0f23; color:#e0e0e0; margin:0; padding:20px; transition:0.4s;}
+        .container {max-width:1200px; margin:auto;}
+        h1 {text-align:center; color:#00d4ff; margin-bottom:8px;}
+        .subtitle {text-align:center; color:#00d4ff99; font-size:1.1em;}
+
+        /* تبديل اللغة */
+        .lang-switch {
+            position:fixed; top:15px; left:15px; z-index:9999; background:#1a1a2e; padding:10px 18px;
+            border-radius:50px; cursor:pointer; box-shadow:0 0 20px rgba(0,212,255,0.3); font-weight:bold;
+        }
+        .lang-switch:hover {background:#00d4ff; color:#000;}
+
+        .stats {display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin:35px 0;}
+        .stat-card {
+            background:#1a1a2e; padding:25px 35px; border-radius:15px; text-align:center; min-width:150px;
+            box-shadow:0 0 25px rgba(0,212,255,0.15); border:2px solid transparent; transition:0.4s;
+        }
+        .stat-card h3 {margin:0; font-size:2.8em; color:#00d4ff;}
+
+        .controls {
+            display:flex; justify-content:center; align-items:center; gap:20px; margin:20px 0; flex-wrap:wrap;
+        }
+        .filter-bar {
+            text-align:center; padding:18px; background:#1a1a2e; border-radius:18px; box-shadow:0 0 20px rgba(0,0,0,0.3);
+        }
+        .filter-btn {
+            background:#16213e; color:#fff; border:none; padding:14px 28px; margin:0 10px;
+            border-radius:50px; cursor:pointer; font-size:1.05em; font-weight:bold; transition:0.3s;
+        }
+        .filter-btn.active {
+            background:#00d4ff; color:#000; transform:scale(1.1); box-shadow:0 0 20px #00d4ff88;
+        }
+
+        .auto-refresh-toggle {
+            display:flex; align-items:center; gap:12px; background:#1a1a2e; padding:14px 24px; border-radius:50px;
+            cursor:pointer; user-select:none; box-shadow:0 0 15px rgba(0,212,255,0.2);
+        }
+        .switch {position:relative; display:inline-block; width:60px; height:34px;}
+        .switch input {opacity:0; width:0; height:0;}
+        .slider {position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#333; transition:0.4s; border-radius:34px;}
+        .slider:before {position:absolute; content:""; height:26px; width:26px; left:4px; bottom:4px; background:#000; transition:0.4s; border-radius:50%;}
+        input:checked + .slider {background:#00d4ff;}
+        input:checked + .slider:before {transform:translateX(26px); background:#000;}
+
+        .refresh-indicator {width:12px; height:12px; background:#0f0; border-radius:50%; animation:pulse 2s infinite;}
+        @keyframes pulse {0%{opacity:0.6; transform:scale(0.8);} 50%{opacity:1; transform:scale(1.2);} 100%{opacity:0.6; transform:scale(0.8);}}
+
+        .chart-container {background:#1a1a2e; padding:30px; border-radius:18px; margin:35px 0;}
+        canvas {max-height:400px;}
+
+        .sources-info {background:#1a1a2e; padding:16px; border-radius:15px; text-align:center; margin:25px 0; font-size:1.1em;}
+        h2 {text-align:center; color:#00d4ff; margin:45px 0 25px; font-size:1.8em;}
+
+        .news-grid {display:grid; gap:24px; grid-template-columns:repeat(auto-fill, minmax(370px, 1fr));}
+        .news-card {background:#16213e; border-radius:16px; overflow:hidden; transition:0.4s; box-shadow:0 6px 18px rgba(0,0,0,0.5);}
+        .news-card:hover {transform:translateY(-10px); box-shadow:0 20px 40px rgba(0,212,255,0.25);}
+        .news-card.hidden {display:none !important;}
+        .header {padding:18px; color:white; display:flex; justify-content:space-between; align-items:center; font-weight:bold;}
+        .content {padding:20px;}
+        .content h3 {margin:0 0 14px; color:#fff; font-size:1.3em;}
+        .sentiment {font-weight:bold; font-size:1.15em; margin:16px 0;}
+        .read-more {color:#00d4ff; text-decoration:none; font-weight:bold; font-size:1.05em;}
+        .footer {text-align:center; padding:50px 20px; color:#888; border-top:1px solid #333; margin-top:60px;}
+    </style>
+</head>
+<body>
+    <!-- زر تبديل اللغة -->
+    <div class="lang-switch" id="langSwitch">العربية / English</div>
+
+    <div class="container">
+        <h1 data-key="main_title">تحليل مشاعر أخبار الكريبتو</h1>
+        <p class="subtitle" data-key="subtitle">تحليل ذكي فوري للسوق بناءً على آخر الأخبار</p>
+
+        <div class="stats">
+            <div class="stat-card" id="positiveCount"><h3>0</h3><p data-key="positive">إيجابي ومتفائل</p></div>
+            <div class="stat-card" id="neutralCount"><h3>0</h3><p data-key="neutral">محايد</p></div>
+            <div class="stat-card" id="negativeCount"><h3>0</h3><p data-key="negative">سلبي ومتشائم</p></div>
+            <div class="stat-card" id="totalCount"><h3>0</h3><p data-key="total">إجمالي المقالات</p></div>
+        </div>
+
+        <div class="controls">
+            <div class="filter-bar">
+                <button class="filter-btn active" data-days="1" data-key="today">أخبار اليوم</button>
+                <button class="filter-btn" data-days="3" data-key="3days">آخر 3 أيام</button>
+                <button class="filter-btn" data-days="7" data-key="7days">آخر 7 أيام</button>
+                <button class="filter-btn" data-days="all" data-key="all_news">كل الأخبار</button>
+            </div>
+
+            <label class="auto-refresh-toggle" id="autoRefreshToggle">
+                <span id="refreshText" data-key="auto_refresh_on">التحديث التلقائي مفعل</span>
+                <div class="refresh-indicator" id="refreshIndicator"></div>
+                <label class="switch">
+                    <input type="checkbox" id="autoRefreshSwitch" checked>
+                    <span class="slider"></span>
+                </label>
+            </label>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="sentimentChart"></canvas>
+        </div>
+
+        <div class="sources-info">
+            <span data-key="sources">مصادر نشطة:</span> {{ active_sources|join(' • ') }}
+            {% if empty_sources %}<br><span style="color:#ff6b6b;" data-key="unavailable">غير متاحة:</span> {{ empty_sources|join(' • ') }}{% endif %}
+        </div>
+
+        <h2 data-key="latest_news">آخر الأخبار والتحديثات</h2>
+
+        <div class="news-grid" id="newsContainer">
+            {% if news %}
+                {% for item in news %}
+                <div class="news-card" data-timestamp="{{ item.published_datetime.timestamp() }}" data-sentiment="{{ item.sentiment }}">
+                    <div class="header" style="background:{{ item.color }}">
+                        <div>{{ item.source }}</div>
+                        <div style="font-size:0.9em;">{{ item.published }}</div>
+                    </div>
+                    <div class="content">
+                        <h3>{{ item.title }}</h3>
+                        <p>{{ item.summary }}</p>
+                        <p class="sentiment">{{ item.emoji }} {{ item.sentiment }} ({{ item.polarity }})</p>
+                        <a href="{{ item.link }}" target="_blank" class="read-more" data-key="read_more">اقرأ المزيد</a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="grid-column:1/-1; text-align:center; color:#888; padding:80px; font-size:1.4em;" data-key="no_news">
+                    لا توجد أخبار حالياً<br><small>جاري جلب البيانات...</small>
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            <span data-key="last_update">آخر تحديث:</span> <span id="lastUpdate">{{ current_time }}</span><br>
+            <small>تحليل المشاعر بـ TextBlob • تطوير بـ Flask + Chart.js</small>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            ar: {
+                title: "تحليل مشاعر أخبار الكريبتو",
+                main_title: "تحليل مشاعر أخبار الكريبتو",
+                subtitle: "تحليل ذكي فوري للسوق بناءً على آخر الأخبار",
+                positive: "إيجابي ومتفائل",
+                neutral: "محايد",
+                negative: "سلبي ومتشائم",
+                total: "إجمالي المقالات",
+                today: "أخبار اليوم",
+                "3days": "آخر 3 أيام",
+                "7days": "آخر 7 أيام",
+                all_news: "كل الأخبار",
+                auto_refresh_on: "التحديث التلقائي مفعل",
+                auto_refresh_off: "التحديث التلقائي معطل",
+                sources: "مصادر نشطة:",
+                unavailable: "غير متاحة:",
+                latest_news: "آخر الأخبار والتحديثات",
+                read_more: "اقرأ المزيد →",
+                no_news: "لا توجد أخبار حالياً<br><small>جاري جلب البيانات...</small>",
+                last_update: "آخر تحديث:"
+            },
+            en: {
+                title: "Crypto News Sentiment Analysis",
+                main_title: "Crypto News Sentiment Analysis",
+                subtitle: "Real-time AI-powered market sentiment analysis",
+                positive: "Positive & Optimistic",
+                neutral: "Neutral",
+                negative: "Negative & Pessimistic",
+                total: "Total Articles",
+                today: "Today's News",
+                "3days": "Last 3 Days",
+                "7days": "Last 7 Days",
+                all_news: "All News",
+                auto_refresh_on: "Auto Refresh ON",
+                auto_refresh_off: "Auto Refresh OFF",
+                sources: "Active Sources:",
+                unavailable: "Unavailable:",
+                latest_news: "Latest News & Updates",
+                read_more: "Read More →",
+                no_news: "No news available<br><small>Fetching data...</small>",
+                last_update: "Last Update:"
+            }
+        };
+
+        let currentLang = localStorage.getItem('lang') || 'ar';
+
+        function applyLanguage(lang) {
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            document.title = translations[lang].title;
+
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[lang][key]) {
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+
+            document.getElementById('langSwitch').textContent = lang === 'ar' ? 'العربية / English' : 'العربية / English';
+            document.getElementById('refreshText').textContent = 
+                autoRefreshSwitch.checked ? translations[lang].auto_refresh_on : translations[lang].auto_refresh_off;
+
+            currentLang = lang;
+            localStorage.setItem('lang', lang);
+        }
+
+        document.getElementById('langSwitch').addEventListener('click', () => {
+            applyLanguage(currentLang === 'ar' ? 'en' : 'ar');
+        });
+
+        // باقي الكود (الفلترة والشارت والتحديث التلقائي) كما هو...
+        document.addEventListener("DOMContentLoaded", function() {
+            applyLanguage(currentLang);
+
+            const cards = document.querySelectorAll('.news-card');
+            const buttons = document.querySelectorAll('.filter-btn');
+            const autoSwitch = document.getElementById('autoRefreshSwitch');
+            const indicator = document.getElementById('refreshIndicator');
+            const refreshText = document.getElementById('refreshText');
+            let chart = null;
+            let refreshInterval = null;
+
+            if (localStorage.getItem('autoRefresh') === 'false') {
+                autoSwitch.checked = false;
+                indicator.style.display = 'none';
+            }
+
+            const positiveEl = document.getElementById('positiveCount').querySelector('h3');
+            const neutralEl = document.getElementById('neutralCount').querySelector('h3');
+            const negativeEl = document.getElementById('negativeCount').querySelector('h3');
+            const totalEl = document.getElementById('totalCount').querySelector('h3');
+
+            function updateStatsAndChart() {
+                let visibleCount = 0;
+                let positive = 0, optimistic = 0, neutral = 0, pessimistic = 0, negative = 0;
+
+                cards.forEach(card => {
+                    if (!card.classList.contains('hidden')) {
+                        visibleCount++;
+                        const s = card.dataset.sentiment;
+                        if (s === 'Positive') positive++;
+                        else if (s === 'Optimistic') optimistic++;
+                        else if (s === 'Neutral') neutral++;
+                        else if (s === 'Pessimistic') pessimistic++;
+                        else if (s === 'Negative') negative++;
+                    }
+                });
+
+                const posTotal = positive + optimistic;
+                const negTotal = negative + pessimistic;
+
+                positiveEl.textContent = posTotal;
+                neutralEl.textContent = neutral;
+                negativeEl.textContent = negTotal;
+                totalEl.textContent = visibleCount;
+
+                if (chart) chart.destroy();
+                const ctx = document.getElementById('sentimentChart').getContext('2d');
+
+                if (visibleCount === 0) {
+                    ctx.canvas.parentNode.innerHTML = `<p style='color:#888;padding:60px;text-align:center;'>${translations[currentLang].no_news}</p>`;
+                    return;
+                }
+
+                chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: currentLang === 'ar' ? 
+                            ['إيجابي', 'متفائل', 'محايد', 'متشائم', 'سلبي'] : 
+                            ['Positive', 'Optimistic', 'Neutral', 'Pessimistic', 'Negative'],
+                        datasets: [{
+                            data: [positive, optimistic, neutral, pessimistic, negative],
+                            backgroundColor: ['#00b09b','#96c93d','#ffd89b','#fecfef','#ff6b6b'],
+                            borderColor: '#0f0f23', borderWidth: 4
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0' } } } }
+                });
+            }
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const days = this.dataset.days;
+                    const now = Date.now() / 1000;
+                    const oneDay = 86400;
+
+                    cards.forEach(card => {
+                        const ts = parseFloat(card.dataset.timestamp) || 0;
+                        if (days === 'all' || (now - ts) <= (parseInt(days) * oneDay)) {
+                            card.classList.remove('hidden');
+                        } else {
+                            card.classList.add('hidden');
+                        }
+                    });
+                    updateStatsAndChart();
+                });
+            });
+
+            function startAutoRefresh() {
+                if (refreshInterval) clearInterval(refreshInterval);
+                refreshInterval = setInterval(() => location.reload(), 5 * 60 * 1000);
+            }
+
+            autoSwitch.addEventListener('change', function() {
+                if (this.checked) {
+                    indicator.style.display = 'block';
+                    localStorage.setItem('autoRefresh', 'true');
+                    startAutoRefresh();
+                } else {
+                    indicator.style.display = 'none';
+                    localStorage.setItem('autoRefresh', 'false');
+                    clearInterval(refreshInterval);
+                }
+                refreshText.textContent = this.checked ? translations[currentLang].auto_refresh_on : translations[currentLang].auto_refresh_off;
+            });
+
+            document.querySelector('[data-days="1"]').click();
+            if (autoSwitch.checked) startAutoRefresh();
+        });
+    </script>
+</body>
+</html>

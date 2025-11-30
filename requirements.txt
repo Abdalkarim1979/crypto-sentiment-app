@@ -1,0 +1,5 @@
+Flask==2.3.3
+feedparser==6.0.10
+textblob==0.17.1
+beautifulsoup4==4.12.2
+Flask-Caching==2.0.2

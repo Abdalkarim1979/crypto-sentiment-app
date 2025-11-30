@@ -1,0 +1,21 @@
+crypto-sentiment-dashboard/
+│
+├── app.py                  # Main application file (Flask server & routing)
+├── config.py               # Configuration settings (optional, for future use)
+│
+├── utils/                  # Helper functions (clean & reusable)
+│   ├── __init__.py         # Makes utils a Python package
+│   ├── sentiment.py        # Sentiment analysis functions + color mapping
+│   ├── parsing.py          # HTML cleaning, summary shortening, date parsing
+│   └── feeds.py            # List of RSS feeds (crypto news sources)
+│
+├── templates/
+│   └── home.html           # Main page template (HTML + Jinja2)
+│
+├── static/
+│   ├── css/
+│   │   └── style.css       # All styles (dark theme, responsive, animations)
+│   └── js/
+│       └── script.js       # Language switch, filtering, chart, auto-refresh logic
+│
+└── requirements.txt        # Required Python packages
