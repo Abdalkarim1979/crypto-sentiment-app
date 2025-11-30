@@ -62,21 +62,6 @@ python app.py
 
 Open your browser and go to: http://127.0.0.1:5000
 
-## Deployment (One-Click)
-
-### Deploy on Render (Free)
-1. Fork this repo
-2. Go to https://render.com
-3. New → Web Service → Connect your GitHub repo
-4. Settings:
-   - Name: `crypto-sentiment-dashboard`
-   - Runtime: `Python`
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `python app.py`
-5. Deploy!
-
-### Deploy on Railway, Fly.io, or any VPS
-Same steps as local setup – just push and run.
 
 ## Technologies Used
 
